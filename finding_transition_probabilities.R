@@ -3,19 +3,43 @@
 #Should we extract the same length for each KM-curve? Or should we add all the data we can?
 
 
-
-
-
-
+#NOTE:
 #The transitions from rate to probability is found in https://journals.sagepub.com/doi/pdf/10.1177/0272989X05282637 Figure 3
-finding_transition_prob <- function(input_var){
+
+
+#Function for calculating the standard error of a survival curve given 
+#number at risk, n_risk, number of deaths at each timestep, n_deaths, and the survival probabilities, surv_prob
+calc_serror <- function(n_risk, n_deaths, surv_prob){
+  serror <- c()
+  sum_temp <- 0
+  for(i in 1:length(n_risk)){
+    sum_temp <- sum_temp + n_deaths[i]/(n_risk[i]*(n_risk[i]-n_deaths[i]))
+    serror <- append(serror, surv_prob*sqrt(sum_temp))
+  }
+  return(serror)
+}
+
+
+km_pf_chemo <- c(1, 0.983, 0.756, 0.62, 0.603, 0.501, 0.439, 0.398, 0.34, 0.277, 0.268, 0.226, 0.217, 0.185) 
+n_risk_pf_chemo <- c(184, 166, 119, 93, 90, 73, 60, 51, 45, 34, 32, 29, 26, 22)
+n_deaths_pf_chemo <- c()#?????
+
+
+
+
+
+#Input:
+#input_var = a list of three values, the rate from PF to P, the rate from P to D, and the HR.
+#Output:
+#The square error when using the given inputs.
+eval_variables <- function(input_var){
   
   r_pf2p_chemo <- input_var[1] 
   r_p2d_chemo <- input_var[2] 
   hr <- input_var[3]
   
   #Rate of dying from other causes 
-  r_d_oc <- 0.0004 #This value is not correct yet.
+  r_d_oc <- 0.00042
   
   #Turning chemo rates to probabilities
   lambda1 <- r_pf2p_chemo + r_d_oc
@@ -43,10 +67,10 @@ finding_transition_prob <- function(input_var){
   
   
   #The extracted Kaplan-Meier values
-  km_os_chemo <- c(0.986, 0.981, 0.957, 0.94, 0.927, 0.884, 0.841, 0.793, 0.738, 0.712, 0.683, 0.669, 0.634, 0.610, 0.566, 0.520, 0.484, 0.459, 0.460, 0.457, 0.419, 0.375)
-  km_pf_chemo <- c(0.983, 0.756, 0.62, 0.603, 0.501, 0.439, 0.398, 0.34, 0.277, 0.268, 0.226, 0.217, 0.185) 
-  km_os_tdxd <- c(0.992, 0.985, 0.967, 0.958, 0.939, 0.928, 0.899, 0.87, 0.857, 0.829, 0.815, 0.793, 0.774, 0.742, 0.731, 0.688, 0.661, 0.623, 0.586, 0.566, 0.539, 0.507, 0.500, 0.484)
-  km_pf_tdxd <- c(0.988, 0.896, 0.82, 0.809, 0.765, 0.681, 0.633, 0.592, 0.554, 0.491, 0.457, 0.422, 0.386, 0.371, 0.363, 0.339, 0.31, 0.295, 0.274, 0.259) 
+  km_os_chemo <- c(1, 0.986, 0.981, 0.957, 0.94, 0.927, 0.884, 0.841, 0.793, 0.738, 0.712, 0.683, 0.669, 0.634)#, 0.610, 0.566, 0.520, 0.484, 0.459, 0.460, 0.457, 0.419, 0.375)
+  km_pf_chemo <- c(1, 0.983, 0.756, 0.62, 0.603, 0.501, 0.439, 0.398, 0.34, 0.277, 0.268, 0.226, 0.217, 0.185) 
+  km_os_tdxd <- c(1, 0.992, 0.985, 0.967, 0.958, 0.939, 0.928, 0.899, 0.87, 0.857, 0.829, 0.815, 0.793, 0.774)#, 0.742, 0.731, 0.688, 0.661, 0.623, 0.586, 0.566, 0.539, 0.507, 0.500, 0.484)
+  km_pf_tdxd <- c(1, 0.988, 0.896, 0.82, 0.809, 0.765, 0.681, 0.633, 0.592, 0.554, 0.491, 0.457, 0.422, 0.386)#, 0.371, 0.363, 0.339, 0.31, 0.295, 0.274, 0.259) 
   
   #Vectors for storing the estimates of the KM curves
   km_os_chemo_model <- c()
@@ -60,6 +84,14 @@ finding_transition_prob <- function(input_var){
   #Start states
   s0_chemo <- c(1,0,0)
   s0_tdxd <- c(1,0,0)
+  
+  survival_chemo <- s0_chemo[1]+s0_chemo[2]
+  km_os_chemo_model <- append(km_os_chemo_model, survival_chemo)
+  km_pf_chemo_model <- append(km_pf_chemo_model, s0_chemo[1])
+  
+  survival_tdxd <- s0_tdxd[1]+s0_tdxd[2]
+  km_os_tdxd_model <- append(km_os_tdxd_model, survival_tdxd)
+  km_pf_tdxd_model <- append(km_pf_tdxd_model, s0_tdxd[1])
   
   
   #Do the simulations
@@ -82,30 +114,40 @@ finding_transition_prob <- function(input_var){
   
   
   #Calculate the error
-  error2 <- sum((km_os_chemo-km_os_chemo_model[1:length(km_os_chemo)])^2) + 
-    sum((km_pf_chemo-km_pf_chemo_model[1:length(km_pf_chemo)])^2) + 
-    sum((km_os_tdxd-km_os_tdxd_model[1:length(km_os_tdxd)])^2) + 
-    sum((km_pf_tdxd-km_pf_tdxd_model[1:length(km_pf_tdxd)])^2)
+  se <- sum((km_os_chemo[2:(length(km_os_chemo))] - km_os_chemo_model[2:(length(km_os_chemo))])^2) + 
+    sum((km_pf_chemo[2:(length(km_pf_chemo))] - km_pf_chemo_model[2:(length(km_pf_chemo))])^2) + 
+    sum((km_os_tdxd[2:(length(km_os_tdxd))] - km_os_tdxd_model[2:(length(km_os_tdxd))])^2) + 
+    sum((km_pf_tdxd[2:(length(km_pf_tdxd))] - km_pf_tdxd_model[2:(length(km_pf_tdxd))])^2)
+  
+  neg_log_likelihood <- -sum(log(km_os_chemo_model[2:(length(km_os_chemo))]) * km_os_chemo[2:(length(km_os_chemo))] + log(1 - km_os_chemo_model[2:(length(km_os_chemo))]) * (1 - km_os_chemo[2:(length(km_os_chemo))]))
+    -sum(log(km_pf_chemo_model[2:(length(km_pf_chemo))]) * km_pf_chemo[2:(length(km_pf_chemo))] + log(1 - km_pf_chemo_model[2:(length(km_pf_chemo))]) * (1 - km_pf_chemo[2:(length(km_pf_chemo))]))
+    -sum(log(km_os_tdxd_model[2:(length(km_os_tdxd))]) * km_os_tdxd[2:(length(km_os_tdxd))] + log(1 - km_os_tdxd_model[2:(length(km_os_tdxd))]) * (1 - km_os_tdxd[2:(length(km_os_tdxd))]))
+    -sum(log(km_pf_tdxd_model[2:(length(km_pf_tdxd))]) * km_pf_tdxd[2:(length(km_pf_tdxd))] + log(1 - km_pf_tdxd_model[2:(length(km_pf_tdxd))]) * (1 - km_pf_tdxd[2:(length(km_pf_tdxd))])) 
+
   
   
-  return(error2)
+  
+  return(se)
+  
   
   
 }
 
-
 #Find the optimal values
-fit_out <- optim(c(0.03, 0.04, 0.5), 
-                 finding_transition_prob,
+fit_out <- optim(c(0.15, 0.08, 0.5), 
+                 eval_variables,
                  hessian = T)
 opt_var <- fit_out$par
 
 opt_var
 
+#Print the hessian matrix
+fit_out$hessian
 
 
 
 #Function for finding the transition matrices such that they can be imported to the CEA file
+#Takes as its input the optimal values for the eval_variables function and outputs a list of transition matrices
 transition_matrices <- function(input_var){
   
   r_pf2p_chemo <- input_var[1] 
@@ -151,41 +193,7 @@ tm <- transition_matrices(opt_var)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #Plot the correct KM-curves vs the cureves from our model. This part of the file is used for validation
-
-
-
-
 library(ggplot2)
 library(ggpubr)
 
@@ -199,7 +207,7 @@ plot_function <- function(input_var){
   hr <- input_var[3]
   
   #Rate of dying from other causes 
-  r_d_oc <- 0.000004 #This value is not correct yet.
+  r_d_oc <- 0.0004 #This value is not correct yet.
   
   #Turning chemo rates to probabilities
   lambda1 <- r_pf2p_chemo + r_d_oc
@@ -227,10 +235,10 @@ plot_function <- function(input_var){
   
   
   #The extracted Kaplan-Meier values
-  km_os_chemo <- c(0.986, 0.981, 0.957, 0.94, 0.927, 0.884, 0.841, 0.793, 0.738, 0.712, 0.683, 0.669, 0.634, 0.610, 0.566, 0.520, 0.484, 0.459, 0.460, 0.457, 0.419, 0.375)
-  km_pf_chemo <- c(0.983, 0.756, 0.62, 0.603, 0.501, 0.439, 0.398, 0.34, 0.277, 0.268, 0.226, 0.217, 0.185) 
-  km_os_tdxd <- c(0.992, 0.985, 0.967, 0.958, 0.939, 0.928, 0.899, 0.87, 0.857, 0.829, 0.815, 0.793, 0.774, 0.742, 0.731, 0.688, 0.661, 0.623, 0.586, 0.566, 0.539, 0.507, 0.500, 0.484)
-  km_pf_tdxd <- c(0.988, 0.896, 0.82, 0.809, 0.765, 0.681, 0.633, 0.592, 0.554, 0.491, 0.457, 0.422, 0.386, 0.371, 0.363, 0.339, 0.31, 0.295, 0.274, 0.259) 
+  km_os_chemo <- c(1, 0.986, 0.981, 0.957, 0.94, 0.927, 0.884, 0.841, 0.793, 0.738, 0.712, 0.683, 0.669, 0.634, 0.610, 0.566, 0.520, 0.484, 0.459, 0.460, 0.457, 0.419, 0.375)
+  km_pf_chemo <- c(1, 0.983, 0.756, 0.62, 0.603, 0.501, 0.439, 0.398, 0.34, 0.277, 0.268, 0.226, 0.217, 0.185) 
+  km_os_tdxd <- c(1, 0.992, 0.985, 0.967, 0.958, 0.939, 0.928, 0.899, 0.87, 0.857, 0.829, 0.815, 0.793, 0.774, 0.742, 0.731, 0.688, 0.661, 0.623, 0.586, 0.566, 0.539, 0.507, 0.500, 0.484)
+  km_pf_tdxd <- c(1, 0.988, 0.896, 0.82, 0.809, 0.765, 0.681, 0.633, 0.592, 0.554, 0.491, 0.457, 0.422, 0.386, 0.371, 0.363, 0.339, 0.31, 0.295, 0.274, 0.259) 
   
   #Vectors for storing the estimates of the KM curves
   km_os_chemo_model <- c()
@@ -244,6 +252,14 @@ plot_function <- function(input_var){
   #Start states
   s0_chemo <- c(1,0,0)
   s0_tdxd <- c(1,0,0)
+  
+  survival_chemo <- s0_chemo[1]+s0_chemo[2]
+  km_os_chemo_model <- append(km_os_chemo_model, survival_chemo)
+  km_pf_chemo_model <- append(km_pf_chemo_model, s0_chemo[1])
+  
+  survival_tdxd <- s0_tdxd[1]+s0_tdxd[2]
+  km_os_tdxd_model <- append(km_os_tdxd_model, survival_tdxd)
+  km_pf_tdxd_model <- append(km_pf_tdxd_model, s0_tdxd[1])
   
   
   for(t in 1:n){
@@ -275,37 +291,51 @@ plot_function <- function(input_var){
   
   
   plot1 <- ggplot(df, aes(x=idx)) + 
-    geom_line(aes(y = km_os_chemo_model[1:m]), color = "darkred") + 
-    geom_line(aes(y = km_os_chemo[1:m]), color="steelblue", linetype="twodash") +
+    geom_line(aes(y = km_os_chemo_model[1:m]), color = "red") + 
+    geom_line(aes(y = km_os_chemo[1:m]), color="blue", linetype="twodash") +
     ylim(0, 1) +
-    ylab("OS chemo")
+    ylab("Probability") +
+    xlab("Month") +
+    ggtitle("OS physician's choice")+
+    scale_x_continuous(breaks = round(seq(0, 18, by = 3),1))+theme(axis.text=element_text(size=12),
+                                                                   axis.title=element_text(size=14))
   
   plot2 <- ggplot(df, aes(x=idx)) + 
-    geom_line(aes(y = km_os_tdxd_model[1:m]), color = "darkred") + 
-    geom_line(aes(y = km_os_tdxd[1:m]), color="steelblue", linetype="twodash") +
+    geom_line(aes(y = km_os_tdxd_model[1:m]), color = "red") + 
+    geom_line(aes(y = km_os_tdxd[1:m]), color="blue", linetype="twodash") +
     ylim(0, 1) +
-    ylab("OS T-DxD")
+    ylab("Probability")+
+    xlab("Month")+
+    ggtitle("OS T-DxD")+
+    scale_x_continuous(breaks = round(seq(0, 18, by = 3),1))+theme(axis.text=element_text(size=12),
+                                                                   axis.title=element_text(size=14))
   
   plot3 <- ggplot(df, aes(x=idx)) + 
-    geom_line(aes(y = km_pf_chemo_model[1:m]), color = "darkred") + 
-    geom_line(aes(y = km_pf_chemo[1:m]), color="steelblue", linetype="twodash") +
+    geom_line(aes(y = km_pf_chemo_model[1:m]), color = "red") + 
+    geom_line(aes(y = km_pf_chemo[1:m]), color="blue", linetype="twodash") +
     ylim(0, 1) +
-    ylab("PFS chemo")
+    ylab("Probability")+
+    xlab("Month")+
+    ggtitle("PFS physician's choice")+
+    scale_x_continuous(breaks = round(seq(0, 18, by = 3),1))+theme(axis.text=element_text(size=12),
+                                                                   axis.title=element_text(size=14))
   
   plot4 <- ggplot(df, aes(x=idx)) + 
-    geom_line(aes(y = km_pf_tdxd_model[1:m]), color = "darkred") + 
-    geom_line(aes(y = km_pf_tdxd[1:m]), color="steelblue", linetype="twodash") +
+    geom_line(aes(y = km_pf_tdxd_model[1:m]), color = "red") + 
+    geom_line(aes(y = km_pf_tdxd[1:m]), color="blue", linetype="twodash") +
     ylim(0, 1) +
-    ylab("PFS T-DxD")
+    ylab("Probability")+
+    xlab("Month")+
+    ggtitle("PFS T-DxD")+
+    scale_x_continuous(breaks = round(seq(0, 18, by = 3),1))+theme(axis.text=element_text(size=12),
+                                                                   axis.title=element_text(size=14))
   
   ggarrange(plot1, plot2, plot3, plot4,
-            #labels = c("OS chemo", "OS T-DxD", "PFS chemo", "PFS T-DxD"),
-            ncol = 2, nrow = 2)
+            ncol = 2, nrow = 2, common.legend = TRUE,legend="bottom") 
 }
 
 
 plot_function(opt_var)
-
 
 
 

@@ -1,7 +1,11 @@
 
-
-
-cea <- function(A, n_cycles){
+#Input:
+#A = a 3x3 transition matrix
+#n_cycles = number of cycles
+#Function for doing n_cycles given a 3x3 transition matrix
+#Output:
+#A list of two DataFrames. One with the probability values for each of the three states at each cycle. And one which is used for plotting.
+cea3state <- function(A, n_cycles){
   
   #Make dataframes to store values
   df <- data.frame(
@@ -28,9 +32,12 @@ cea <- function(A, n_cycles){
   #The initial state
   s0 <- matrix(c(1,0,0), ncol = 3)
   
+  cl <- 1/12
+  
   #The Markov simulation
   for (t in 0:(n_cycles - 1)) {
     
+    #Update the discount rate vector
     dr_v[t+2] <- (1/(1+0.03))^((t+1)*cl)
     
     #Do one cycle
@@ -60,7 +67,7 @@ cea <- function(A, n_cycles){
   df_plot["state"][df_plot["state"] == n_cycles*2+2] <- "Dead"
   
   
-  return(list(df, df_plot))
+  return(list(df, df_plot, dr_v))
 }
 
 
@@ -70,15 +77,15 @@ source("finding_transition_probabilities.R")
 A_chemo <- tm[[1]]
 A_tdxd <- tm[[2]]
 
-
+n_cycles <- 120
 
 #Finding the values for chemo
-df_list_chemo <- cea(A_chemo, 60)
+df_list_chemo <- cea3state(A_chemo, n_cycles)
 df_chemo <- df_list_chemo[[1]]
 df_plot_chemo <- df_list_chemo[[2]]
 
 #Finding the values for tdxd
-df_list_tdxd <- cea(A_tdxd, 60)
+df_list_tdxd <- cea3state(A_tdxd, n_cycles)
 df_tdxd <- df_list_tdxd[[1]]
 df_plot_tdxd <- df_list_tdxd[[2]]
 
@@ -86,53 +93,145 @@ df_plot_tdxd <- df_list_tdxd[[2]]
 
 #Plot results
 library(ggplot2)
-ggplot(df_plot_chemo, aes(x = cycle,y = value, group = state, color = state)) +
-  geom_line()
+p1 <- ggplot(df_plot_chemo, aes(x = cycle,y = value, group = state, color = state)) +
+  geom_line() + 
+  ggtitle("Evolution of patients with physician's choice treatment") +
+  xlab("Months from start") + ylab("Probability") + 
+  theme(
+    plot.title = element_text(color="dodgerblue4", size=14, face="bold.italic"),
+    axis.title.x = element_text(color="darkolivegreen4", size=14, face="bold"),
+    axis.title.y = element_text(color="#993333", size=14, face="bold")
+    )
 
-ggplot(df_plot_tdxd, aes(x = cycle,y = value, group = state, color = state)) +
-  geom_line()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+p2 <- ggplot(df_plot_tdxd, aes(x = cycle,y = value, group = state, color = state)) +
+  geom_line() + 
+  ggtitle("Evolution of patients with T-DxD treatment") +
+  xlab("Months from start") + ylab("Probability") + 
+  theme(
+  plot.title = element_text(color="dodgerblue4", size=14, face="bold.italic"),
+  axis.title.x = element_text(color="darkolivegreen4", size=14, face="bold"),
+  axis.title.y = element_text(color="#993333", size=14, face="bold")
+  )
 
 
 
+#p1 
+#p2
+
+ggarrange(p1, p2,
+          #labels = c("OS chemo", "OS T-DxD", "PFS chemo", "PFS T-DxD"),
+          nrow = 2)
+
+p_pf <- ggplot(NULL, aes(x = cycle, y = ProgressionFree)) + 
+  geom_point(data = df_chemo, color = "blue") +
+  geom_point(data = df_tdxd, color = "red") +
+  ggtitle("% Progression Free") +
+  xlab("Months from start") + ylab("Probability") +
+  scale_x_continuous(breaks = round(seq(0, 120, by = 12),1))+theme(axis.text=element_text(size=12),
+                                                                   axis.title=element_text(size=14),
+                                                                   plot.title=element_text(size=20))
+
+p_p <- ggplot(NULL, aes(x = cycle, y = Progressed)) + 
+    geom_point(data = df_chemo, color = "blue") +
+    geom_point(data = df_tdxd, color = "red") +
+    ggtitle("% Progressed") +
+    xlab("Months from start") + ylab("Probability") +
+  scale_x_continuous(breaks = round(seq(0, 120, by = 12),1))+theme(axis.text=element_text(size=12),
+                                                                   axis.title=element_text(size=14),
+                                                                   plot.title=element_text(size=20))
+
+p_a <- ggplot(NULL, aes(x = cycle, y = 1-Dead)) + 
+  geom_point(data = df_chemo, color = "blue") +
+  geom_point(data = df_tdxd, color = "red") +
+  ggtitle("% Alive") +
+  xlab("Months from start") + ylab("Probability") +
+  scale_x_continuous(breaks = round(seq(0, 120, by = 12),1))+theme(axis.text=element_text(size=12),
+                                                                 axis.title=element_text(size=14),
+                                                                 plot.title=element_text(size=20))
+
+
+p_pf
+
+p_p
+
+p_a
+
+ggarrange(p_pf, p_p, p_a)
+
+
+
+
+#These values need fixing
+cost_pf_chemo <- 7776
+cost_p_chemo <- 16058.83
+cost_pf_tdxd <- 14602
+cost_p_tdxd <- 16058.83
+
+dr_v <- df_list_chemo[[3]]
+
+#Calculating the cost
+cost_chemo <- (sum(df_chemo$ProgressionFree)*cost_pf_chemo + sum(df_chemo$Progressed)*cost_p_chemo - (df_chemo[1,]$ProgressionFree/2)*cost_pf_chemo)/12
+cost_tdxd <- (sum(df_tdxd$ProgressionFree)*cost_pf_tdxd + sum(df_chemo$Progressed)*cost_p_tdxd - (df_tdxd[1,]$ProgressionFree/2)*cost_pf_tdxd)/12
+
+cost_chemo_d <- (sum(df_chemo$ProgressionFree*dr_v)*cost_pf_chemo + sum(df_chemo$Progressed*dr_v)*cost_p_chemo - (df_chemo[1,]$ProgressionFree/2)*cost_pf_chemo)/12
+cost_tdxd_d <- (sum(df_tdxd$ProgressionFree*dr_v)*cost_pf_tdxd + sum(df_chemo$Progressed*dr_v)*cost_p_tdxd - (df_tdxd[1,]$ProgressionFree/2)*cost_pf_tdxd)/12
+
+
+#These values need fixing
+qaly_pf_chemo <- 0.601
+qaly_p_chemo <- 0.54
+qaly_pf_tdxd <- 0.602
+qaly_p_tdxd <- 0.54
+
+#Calculate the qalys
+qaly_chemo <- (sum(df_chemo$ProgressionFree)*qaly_pf_chemo + sum(df_chemo$Progressed)*qaly_p_chemo - df_chemo[1,]$ProgressionFree*qaly_pf_chemo/2 )/12
+qaly_tdxd <- (sum(df_tdxd$ProgressionFree)*qaly_pf_tdxd + sum(df_tdxd$Progressed)*qaly_p_tdxd - df_tdxd[1,]$ProgressionFree*qaly_pf_tdxd/2 )/12
+
+qaly_chemo_d <- (sum(df_chemo$ProgressionFree*dr_v)*qaly_pf_chemo + sum(df_chemo$Progressed*dr_v)*qaly_p_chemo - df_chemo[1,]$ProgressionFree*qaly_pf_chemo/2 )/12
+qaly_tdxd_d <- (sum(df_tdxd$ProgressionFree*dr_v)*qaly_pf_tdxd + sum(df_tdxd$Progressed*dr_v)*qaly_p_tdxd - df_tdxd[1,]$ProgressionFree*qaly_pf_tdxd/2 )/12
+
+#Calculate total life years
+ly_chemo <- (sum(df_chemo$ProgressionFree) + sum(df_chemo$Progressed) - df_chemo[1,]$ProgressionFree/2 )/12
+ly_tdxd <- (sum(df_tdxd$ProgressionFree) + sum(df_tdxd$Progressed) - df_tdxd[1,]$ProgressionFree/2 )/12
+
+
+#Summary of the results
+df_res <- data.frame(
+  Strategy = c("Chemo:", "T-Dxd:"),
+  Costs = c(cost_chemo, cost_tdxd),
+  DiscountedCost = c(cost_chemo_d, cost_tdxd_d),
+  LifeYears = c(ly_chemo, ly_tdxd),
+  QALYs = c(qaly_chemo, qaly_tdxd),
+  DiscountedQALY = c(qaly_chemo_d, qaly_tdxd_d),
+  Incremental_Costs = c(0, cost_tdxd-cost_chemo),
+  Incremental_QALYs = c(0, qaly_tdxd-qaly_chemo),
+  ICER = c(0, (cost_tdxd_d-cost_chemo_d)/(qaly_tdxd_d-qaly_chemo_d))
+)
+
+df_res
 
 
 
 
 
-print("The LY's:")
-print((sum(df[2:601,]$healthy) + sum(df[2:601,]$acuteEXD) + df[1,]$healthy/2 )/12)
 
-print("The QALY's:")
-print((sum(df$healthy)*1 + sum(df$acuteEXD)*0.7 - df[1,]$healthy/2)/12)
 
-print("The cost:")
-print((sum(df$healthy)*1500 + sum(df$acuteEXD)*3000 - (df[1,]$healthy/2)*1500)/12)
 
-print("The discounted LY's:")
-print((sum(df$healthy*dr_v) + sum(df$acuteEXD*dr_v) - df[1,]$healthy/2 )/12)
 
-print("The discounted QALY's:")
-print((sum(df$healthy*dr_v) + sum(df$acuteEXD*dr_v)*0.7 - df[1,]$healthy/2)/12)
 
-print("The discounted costs:")
-print((sum(df$healthy*dr_v)*1500 + sum(df$acuteEXD*dr_v)*3000 - (df[1,]$healthy/2)*1500)/12)
 
-print("1b:")
-print("Prevelence at age 55:")
-print(df[60,]$acuteEXD/(df[60,]$acuteEXD+df[60,]$healthy))
+
+
+
+
+
+
+
+
+
+#ggplot(data=df_res, aes(x=Costs, y=QALYs)) +
+ # geom_line(linetype = "dashed")+
+  #geom_point()+ 
+  #ggtitle("Cost-effectiveness plane") +
+  #xlab("Cost") + ylab("QALY")
+  
