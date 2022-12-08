@@ -12,4 +12,4 @@ The repo contains four R files. One is for the homework and the three others are
 ```sensitivity_analysis.R``` does the sensitivity analysis.
 
 
-![](Figures/evolution_3state.pdf)
+![](Figures/evolution3state.png)
