@@ -9,6 +9,8 @@
 
 #Function for calculating the standard error of a survival curve given 
 #number at risk, n_risk, number of deaths at each timestep, n_deaths, and the survival probabilities, surv_prob
+
+#TODO: Function currently not in use. Need to find n_deaths first.
 calc_serror <- function(n_risk, n_deaths, surv_prob){
   serror <- c()
   sum_temp <- 0
@@ -38,7 +40,7 @@ eval_variables <- function(input_var){
   r_p2d_chemo <- input_var[2] 
   hr <- input_var[3]
   
-  #Rate of dying from other causes 
+  #Rate of dying from other causes (background mortality)
   r_d_oc <- 0.0004
   
   #Turning chemo rates to probabilities
@@ -114,35 +116,28 @@ eval_variables <- function(input_var){
   
   
   #Calculate the error
-  se <- sum((km_os_chemo[2:(length(km_os_chemo))] - km_os_chemo_model[2:(length(km_os_chemo))])^2) + 
+  serror <- sum((km_os_chemo[2:(length(km_os_chemo))] - km_os_chemo_model[2:(length(km_os_chemo))])^2) + 
     sum((km_pf_chemo[2:(length(km_pf_chemo))] - km_pf_chemo_model[2:(length(km_pf_chemo))])^2) + 
     sum((km_os_tdxd[2:(length(km_os_tdxd))] - km_os_tdxd_model[2:(length(km_os_tdxd))])^2) + 
     sum((km_pf_tdxd[2:(length(km_pf_tdxd))] - km_pf_tdxd_model[2:(length(km_pf_tdxd))])^2)
   
-  neg_log_likelihood <- -sum(log(km_os_chemo_model[2:(length(km_os_chemo))]) * km_os_chemo[2:(length(km_os_chemo))] + log(1 - km_os_chemo_model[2:(length(km_os_chemo))]) * (1 - km_os_chemo[2:(length(km_os_chemo))]))
-    -sum(log(km_pf_chemo_model[2:(length(km_pf_chemo))]) * km_pf_chemo[2:(length(km_pf_chemo))] + log(1 - km_pf_chemo_model[2:(length(km_pf_chemo))]) * (1 - km_pf_chemo[2:(length(km_pf_chemo))]))
-    -sum(log(km_os_tdxd_model[2:(length(km_os_tdxd))]) * km_os_tdxd[2:(length(km_os_tdxd))] + log(1 - km_os_tdxd_model[2:(length(km_os_tdxd))]) * (1 - km_os_tdxd[2:(length(km_os_tdxd))]))
-    -sum(log(km_pf_tdxd_model[2:(length(km_pf_tdxd))]) * km_pf_tdxd[2:(length(km_pf_tdxd))] + log(1 - km_pf_tdxd_model[2:(length(km_pf_tdxd))]) * (1 - km_pf_tdxd[2:(length(km_pf_tdxd))])) 
-
   
-  
-  
-  return(se)
+  return(serror)
   
   
   
 }
 
-#Find the optimal values
+#Find the optimal values (Here we could do a wider search for starting values since we might have missed the global optimum.)
 fit_out <- optim(c(0.15, 0.08, 0.5), 
                  eval_variables,
                  hessian = T)
+
+#Extract the optimal values for our three varaibles
 opt_var <- fit_out$par
 
 opt_var
 
-#Print the hessian matrix
-fit_out$hessian
 
 
 
@@ -186,8 +181,7 @@ transition_matrices <- function(input_var){
 }
 
 
-#c(0.13384343, 0.07815344, 0.2)
-
+#Find the optimal transition matrices
 tm <- transition_matrices(opt_var)
 
 
