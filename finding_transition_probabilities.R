@@ -39,7 +39,7 @@ eval_variables <- function(input_var){
   hr <- input_var[3]
   
   #Rate of dying from other causes 
-  r_d_oc <- 0.00042
+  r_d_oc <- 0.0004
   
   #Turning chemo rates to probabilities
   lambda1 <- r_pf2p_chemo + r_d_oc
@@ -185,6 +185,9 @@ transition_matrices <- function(input_var){
   return(matrices)
 }
 
+
+#c(0.13384343, 0.07815344, 0.2)
+
 tm <- transition_matrices(opt_var)
 
 
@@ -284,9 +287,6 @@ plot_function <- function(input_var){
   idx <- 1:m
   df <- data.frame(idx, km_os_chemo_model[1:m], km_os_tdxd_model[1:m], km_os_chemo[1:m])
   
-  #ggplot(data=df, aes(x=idx, y=km_os_chemo_model)) +
-   # geom_line(linetype = "dashed")+
-    #geom_point()
   
   
   

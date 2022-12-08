@@ -163,18 +163,18 @@ ggarrange(p_pf, p_p, p_a)
 
 #These values need fixing
 cost_pf_chemo <- 7776
-cost_p_chemo <- 16058.83
+cost_p_chemo <- 11337.97
 cost_pf_tdxd <- 14602
-cost_p_tdxd <- 16058.83
+cost_p_tdxd <- 11337.97
 
 dr_v <- df_list_chemo[[3]]
 
 #Calculating the cost
-cost_chemo <- (sum(df_chemo$ProgressionFree)*cost_pf_chemo + sum(df_chemo$Progressed)*cost_p_chemo - (df_chemo[1,]$ProgressionFree/2)*cost_pf_chemo)/12
-cost_tdxd <- (sum(df_tdxd$ProgressionFree)*cost_pf_tdxd + sum(df_chemo$Progressed)*cost_p_tdxd - (df_tdxd[1,]$ProgressionFree/2)*cost_pf_tdxd)/12
+cost_chemo <- (sum(df_chemo$ProgressionFree)*cost_pf_chemo + sum(df_chemo$Progressed)*cost_p_chemo - (df_chemo[1,]$ProgressionFree/2)*cost_pf_chemo)
+cost_tdxd <- (sum(df_tdxd$ProgressionFree)*cost_pf_tdxd + sum(df_chemo$Progressed)*cost_p_tdxd - (df_tdxd[1,]$ProgressionFree/2)*cost_pf_tdxd)
 
-cost_chemo_d <- (sum(df_chemo$ProgressionFree*dr_v)*cost_pf_chemo + sum(df_chemo$Progressed*dr_v)*cost_p_chemo - (df_chemo[1,]$ProgressionFree/2)*cost_pf_chemo)/12
-cost_tdxd_d <- (sum(df_tdxd$ProgressionFree*dr_v)*cost_pf_tdxd + sum(df_chemo$Progressed*dr_v)*cost_p_tdxd - (df_tdxd[1,]$ProgressionFree/2)*cost_pf_tdxd)/12
+cost_chemo_d <- (sum(df_chemo$ProgressionFree*dr_v)*cost_pf_chemo + sum(df_chemo$Progressed*dr_v)*cost_p_chemo - (df_chemo[1,]$ProgressionFree/2)*cost_pf_chemo)
+cost_tdxd_d <- (sum(df_tdxd$ProgressionFree*dr_v)*cost_pf_tdxd + sum(df_chemo$Progressed*dr_v)*cost_p_tdxd - (df_tdxd[1,]$ProgressionFree/2)*cost_pf_tdxd)
 
 
 #These values need fixing
@@ -182,6 +182,12 @@ qaly_pf_chemo <- 0.601
 qaly_p_chemo <- 0.54
 qaly_pf_tdxd <- 0.602
 qaly_p_tdxd <- 0.54
+
+#These values need fixing
+#qaly_pf_chemo <- 1
+#qaly_p_chemo <- 0.54
+#qaly_pf_tdxd <- 1
+#qaly_p_tdxd <- 0.54
 
 #Calculate the qalys
 qaly_chemo <- (sum(df_chemo$ProgressionFree)*qaly_pf_chemo + sum(df_chemo$Progressed)*qaly_p_chemo - df_chemo[1,]$ProgressionFree*qaly_pf_chemo/2 )/12
