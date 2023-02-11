@@ -185,40 +185,106 @@ ggarrange(p_pf, p_p, p_a)
 
 
 
+
+#Everything under her needs to be updated!!!
+
+
 #The cost values
-cost_pf_chemo <- 7776
-cost_p_chemo <- 11337.97
-cost_pf_tdxd <- 14602
-cost_p_tdxd <- 11337.97
+cost_pf_chemo <- 7203.56
+#cost_pf_chemo <- 11000
+cost_p_chemo <- 10882.6
+cost_pfAE_chemo <- 5093.37
+cost_pAE_chemo <- 10882.6
+
+
+cost_pf_tdxd <- 14113.69
+cost_p_tdxd <- 10882.6
+cost_pfAE_tdxd <- 5093.37
+cost_pAE_tdxd <- 10882.6
+
+cost_pfILD <- 5093.37
+cost_pILD <- 10882.6
 
 dr_v <- df_list_chemo[[3]]
 
 #Calculating the cost
-cost_chemo <- (sum(df_chemo$ProgressionFree)*cost_pf_chemo + sum(df_chemo$Progressed)*cost_p_chemo - (df_chemo[1,]$ProgressionFree/2)*cost_pf_chemo)
-cost_tdxd <- (sum(df_tdxd$ProgressionFree)*cost_pf_tdxd + sum(df_chemo$Progressed)*cost_p_tdxd - (df_tdxd[1,]$ProgressionFree/2)*cost_pf_tdxd)
+cost_chemo <- (sum(df_chemo$ProgressionFree)*cost_pf_chemo + sum(df_chemo$Progressed)*cost_p_chemo +
+              sum(df_chemo$ProgressionFreeAE)*cost_pfAE_chemo + sum(df_chemo$ProgressedAE)*cost_pAE_chemo
+               - (df_chemo[1,]$ProgressionFree/2)*cost_pf_chemo) + 10375.8444
 
-cost_chemo_d <- (sum(df_chemo$ProgressionFree*dr_v)*cost_pf_chemo + sum(df_chemo$Progressed*dr_v)*cost_p_chemo - (df_chemo[1,]$ProgressionFree/2)*cost_pf_chemo)
-cost_tdxd_d <- (sum(df_tdxd$ProgressionFree*dr_v)*cost_pf_tdxd + sum(df_chemo$Progressed*dr_v)*cost_p_tdxd - (df_tdxd[1,]$ProgressionFree/2)*cost_pf_tdxd)
+cost_tdxd <- (sum(df_tdxd$ProgressionFree)*cost_pf_tdxd + sum(df_chemo$Progressed)*cost_p_tdxd +
+                sum(df_tdxd$ProgressionFreeAE)*cost_pfAE_tdxd + sum(df_chemo$ProgressedAE)*cost_pAE_tdxd +
+                sum(df_tdxd$ProgressionFreeILD)*cost_pfILD + sum(df_chemo$ProgressedILD)*cost_pILD 
+              - (df_tdxd[1,]$ProgressionFree/2)*cost_pf_tdxd)+7270.62446
+
+cost_chemo_d <- (sum(df_chemo$ProgressionFree*dr_v)*cost_pf_chemo + sum(df_chemo$Progressed*dr_v)*cost_p_chemo +
+                   sum(df_chemo$ProgressionFreeAE*dr_v)*cost_pfAE_chemo + sum(df_chemo$ProgressedAE*dr_v)*cost_pAE_chemo
+                 - (df_chemo[1,]$ProgressionFree/2)*cost_pf_chemo) + 10375.8444
+
+cost_tdxd_d <- (sum(df_tdxd$ProgressionFree*dr_v)*cost_pf_tdxd + sum(df_chemo$Progressed*dr_v)*cost_p_tdxd +
+                     sum(df_tdxd$ProgressionFreeAE*dr_v)*cost_pfAE_tdxd + sum(df_chemo$ProgressedAE*dr_v)*cost_pAE_tdxd +
+                     sum(df_tdxd$ProgressionFreeILD*dr_v)*cost_pfILD + sum(df_chemo$ProgressedILD*dr_v)*cost_pILD 
+                   - (df_tdxd[1,]$ProgressionFree/2)*cost_pf_tdxd)+7270.62446
 
 
 #The QALY values
-qaly_pf_chemo <- 0.601
+qaly_pf_chemo <- 0.65-0.0715527
 qaly_p_chemo <- 0.54
-qaly_pf_tdxd <- 0.602
+qaly_pfAE_chemo <- 0.547
+qaly_pAE_chemo <- 0.437
+
+
+qaly_pf_tdxd <- 0.65-0.05670907
 qaly_p_tdxd <- 0.54
+qaly_pfAE_tdxd <- 0.547
+qaly_pAE_tdxd <- 0.437
+  
+qaly_pfILD <- 0.547
+qaly_pILD <- 0.437
 
 
 #Calculate the qalys
-qaly_chemo <- (sum(df_chemo$ProgressionFree)*qaly_pf_chemo + sum(df_chemo$Progressed)*qaly_p_chemo - df_chemo[1,]$ProgressionFree*qaly_pf_chemo/2 )/12
-qaly_tdxd <- (sum(df_tdxd$ProgressionFree)*qaly_pf_tdxd + sum(df_tdxd$Progressed)*qaly_p_tdxd - df_tdxd[1,]$ProgressionFree*qaly_pf_tdxd/2 )/12
 
-qaly_chemo_d <- (sum(df_chemo$ProgressionFree*dr_v)*qaly_pf_chemo + sum(df_chemo$Progressed*dr_v)*qaly_p_chemo - df_chemo[1,]$ProgressionFree*qaly_pf_chemo/2 )/12
-qaly_tdxd_d <- (sum(df_tdxd$ProgressionFree*dr_v)*qaly_pf_tdxd + sum(df_tdxd$Progressed*dr_v)*qaly_p_tdxd - df_tdxd[1,]$ProgressionFree*qaly_pf_tdxd/2 )/12
+qaly_chemo <- (sum(df_chemo$ProgressionFree)*qaly_pf_chemo + sum(df_chemo$Progressed)*qaly_p_chemo +
+                 sum(df_chemo$ProgressionFreeAE)*qaly_pfAE_chemo + sum(df_chemo$ProgressedAE)*qaly_pAE_chemo
+               - (df_chemo[1,]$ProgressionFree/2)*qaly_pf_chemo)/12
+
+qaly_tdxd <- (sum(df_tdxd$ProgressionFree)*qaly_pf_tdxd + sum(df_chemo$Progressed)*qaly_p_tdxd +
+                sum(df_tdxd$ProgressionFreeAE)*qaly_pfAE_tdxd + sum(df_chemo$ProgressedAE)*qaly_pAE_tdxd +
+                sum(df_tdxd$ProgressionFreeILD)*qaly_pfILD + sum(df_chemo$ProgressedILD)*qaly_pILD 
+              - (df_tdxd[1,]$ProgressionFree/2)*qaly_pf_tdxd)/12
+
+qaly_chemo_d <- (sum(df_chemo$ProgressionFree*dr_v)*qaly_pf_chemo + sum(df_chemo$Progressed*dr_v)*qaly_p_chemo +
+                   sum(df_chemo$ProgressionFreeAE*dr_v)*qaly_pfAE_chemo + sum(df_chemo$ProgressedAE*dr_v)*qaly_pAE_chemo
+                 - (df_chemo[1,]$ProgressionFree/2)*qaly_pf_chemo)/12
+
+qaly_tdxd_d <- (sum(df_tdxd$ProgressionFree*dr_v)*qaly_pf_tdxd + sum(df_chemo$Progressed*dr_v)*qaly_p_tdxd +
+                  sum(df_tdxd$ProgressionFreeAE*dr_v)*qaly_pfAE_tdxd + sum(df_chemo$ProgressedAE*dr_v)*qaly_pAE_tdxd +
+                  sum(df_tdxd$ProgressionFreeILD*dr_v)*qaly_pfILD + sum(df_chemo$ProgressedILD*dr_v)*qaly_pILD 
+                - (df_tdxd[1,]$ProgressionFree/2)*qaly_pf_tdxd)/12
+
 
 #Calculate total life years
-ly_chemo <- (sum(df_chemo$ProgressionFree) + sum(df_chemo$Progressed) - df_chemo[1,]$ProgressionFree/2 )/12
-ly_tdxd <- (sum(df_tdxd$ProgressionFree) + sum(df_tdxd$Progressed) - df_tdxd[1,]$ProgressionFree/2 )/12
+ly_chemo <- (sum(df_chemo$ProgressionFree) + sum(df_chemo$Progressed) +
+               sum(df_chemo$ProgressionFreeAE) + sum(df_chemo$ProgressedAE)
+             - df_chemo[1,]$ProgressionFree/2 )/12
+ly_tdxd <- (sum(df_tdxd$ProgressionFree) + sum(df_tdxd$Progressed) +
+              sum(df_tdxd$ProgressionFreeAE) + sum(df_tdxd$ProgressedAE)+
+              sum(df_tdxd$ProgressionFreeILD) + sum(df_tdxd$ProgressedILD)
+            - df_tdxd[1,]$ProgressionFree/2 )/12
 
+ly_chemo_notAE <- (sum(df_chemo$ProgressionFree) + sum(df_chemo$Progressed)
+             - df_chemo[1,]$ProgressionFree/2 )/12
+
+ly_tdxd_notAE <- (sum(df_tdxd$ProgressionFree) + sum(df_tdxd$Progressed))/12
+
+ly_chemo_AE <- (
+               sum(df_chemo$ProgressionFreeAE) + sum(df_chemo$ProgressedAE))/12
+ly_tdxd_AE <- (
+              sum(df_tdxd$ProgressionFreeAE) + sum(df_tdxd$ProgressedAE))/12
+
+ly_tdxd_ILD <- (
+              sum(df_tdxd$ProgressionFreeILD) + sum(df_tdxd$ProgressedILD))/12
 
 #Summary of the results
 df_res <- data.frame(

@@ -25,6 +25,7 @@ calc_serror <- function(n_risk, n_deaths, surv_prob){
 }
 
 
+#NOT in use
 km_pf_chemo <- c(1, 0.983, 0.756, 0.62, 0.603, 0.501, 0.439, 0.398, 0.34, 0.277, 0.268, 0.226, 0.217, 0.185) 
 n_risk_pf_chemo <- c(184, 166, 119, 93, 90, 73, 60, 51, 45, 34, 32, 29, 26, 22)
 n_deaths_pf_chemo <- c()#?????
@@ -43,23 +44,27 @@ n_deaths_pf_chemo <- c()#?????
 transition_matrices <- function(input_var, calibrate=T){
   #print("RUNNING")
   
-  r_prog <- input_var[1] #Rate 1
-  r_prog_death <- input_var[2] #Rate 2
+  r_pf2prog <- input_var[1] #Rate 1
+  r_prog2death <- input_var[2] #Rate 2
   hr_pf2prog_chemo2tdxd <- input_var[3]
   
+  #Variables for the AEs in chemo
   gamma_chemo <- input_var[4]
   alpha_chemo <- input_var[5]
   
+  #Variables for the AEs in Tdxd
   gamma_tdxd <- input_var[6]
   alpha_tdxd <- input_var[7]
   
+  #Variables for the ILDs in Tdxd
   gamma_ILD <- input_var[8]
   alpha_ILD <- input_var[9]
   
   #Rate of dying from other causes (background mortality)
   r_OC_death <- rep(c(0.000455117,0.000667712,0.000939403,0.001487732,0.002481213, 0.004368355, 0.008008381,0.014505686, 0.024617632)
                     ,each=(12*5))
-
+  
+  #Takes to long to calibrate if we use the whole length (we do not need the whole lenght to calibrate)
   if(calibrate){
     n <- 40
   }else{
@@ -97,40 +102,40 @@ transition_matrices <- function(input_var, calibrate=T){
   
   
   #Defining some hazard ratios (Dummy variables for now, maybe changed later)
-  hr_progAE <- 1
-  hr_progAE_death <- 1
+  hr_pfAE2progAE <- 0.9
+  hr_progAE2death <- 1
   hr_pfae2prog_chemo2tdxd <- 1
-  hr_prog2death_chemo2tdxd <- 1
-  hr_progAE2death_chemo2tdxd <- 1
+  hr_pf2prog2death_chemo2tdxd <- 1
+  hr_pfAE2progAE2death_chemo2tdxd <- 1
   hr_pf2progILD_chemo2tdxd <- 1
-  hr_progILD2death_chemo2tdxd <- 1
+  hr_pf2progILD2death_chemo2tdxd <- 1
   
   
   #Finding the relationship between the rates
-  r_progAE <- r_prog*hr_progAE
-  r_progILD <- r_prog*0
-  r_progILD_death <- r_prog_death*0
-  r_progAE_death <- r_prog_death*hr_progAE_death
+  r_pfAE2progAE <- r_pf2prog*hr_pfAE2progAE
+  r_pf2progILD <- r_pf2prog*0
+  r_pf2progILD_death <- r_prog2death*0
+  r_progAE2death <- r_prog2death*hr_progAE2death
   
   
-  r_prog_tdxd <- r_prog*hr_pf2prog_chemo2tdxd
-  r_progAE_tdxd <- r_prog*hr_pfae2prog_chemo2tdxd
-  r_prog_death_tdxd <- r_prog_death*hr_prog2death_chemo2tdxd
-  r_progAE_death_tdxd <- r_prog_death*hr_progAE2death_chemo2tdxd
-  r_progILD_tdxd <- r_prog*hr_pf2progILD_chemo2tdxd
-  r_progILD_death_tdxd <- r_prog_death*hr_progILD2death_chemo2tdxd
+  r_pf2prog_tdxd <- r_pf2prog*hr_pf2prog_chemo2tdxd
+  r_pfAE2progAE_tdxd <- r_pf2prog*hr_pfae2prog_chemo2tdxd
+  r_prog2death_tdxd <- r_prog2death*hr_pf2prog2death_chemo2tdxd
+  r_progAE2death_tdxd <- r_prog2death*hr_pfAE2progAE2death_chemo2tdxd
+  r_pf2progILD_tdxd <- r_pf2prog*hr_pf2progILD_chemo2tdxd
+  r_pf2progILD_death_tdxd <- r_prog2death*hr_pf2progILD2death_chemo2tdxd
   
   P_chemo <- list()
   P_tdxd <- list()
   
   for(t in 1:n){
     #Creating the transition matrices
-    G_chemo <- matrix(c(-(r_prog + r_OC_death[t] + r_AE[t] + r_ILD[t]), r_AE[t], r_ILD[t], r_prog, 0, 0, r_OC_death[t],
-                        0, -(r_progAE + r_OC_death[t]), 0, 0, r_progAE, 0, r_OC_death[t],
-                        0, 0, -(r_progILD + r_OC_death[t]), 0, 0, r_progILD, r_OC_death[t],
-                        0, 0, 0, -(r_OC_death[t] + r_prog_death), 0, 0, (r_OC_death[t] + r_prog_death),
-                        0, 0, 0, 0, -(r_OC_death[t] + r_progAE_death), 0, (r_OC_death[t] + r_progAE_death),
-                        0, 0, 0, 0, 0, -(r_OC_death[t] + r_progILD_death), (r_OC_death[t] + r_progILD_death),
+    G_chemo <- matrix(c(-(r_pf2prog + r_OC_death[t] + r_AE[t] + r_ILD[t]), r_AE[t], r_ILD[t], r_pf2prog, 0, 0, r_OC_death[t],
+                        0, -(r_pfAE2progAE + r_OC_death[t]), 0, 0, r_pfAE2progAE, 0, r_OC_death[t],
+                        0, 0, -(r_pf2progILD + r_OC_death[t]), 0, 0, r_pf2progILD, r_OC_death[t],
+                        0, 0, 0, -(r_OC_death[t] + r_prog2death), 0, 0, (r_OC_death[t] + r_prog2death),
+                        0, 0, 0, 0, -(r_OC_death[t] + r_progAE2death), 0, (r_OC_death[t] + r_progAE2death),
+                        0, 0, 0, 0, 0, -(r_OC_death[t] + r_pf2progILD_death), (r_OC_death[t] + r_pf2progILD_death),
                         0, 0, 0, 0, 0, 0, 0), 
                       ncol = 7, nrow = 7,
                       dimnames = list(c("PF", "PF_AE", "PF_ILD", "Prog", "Prog_AE", "Prog_ILD", "Death"),
@@ -140,12 +145,12 @@ transition_matrices <- function(input_var, calibrate=T){
     #print("This is G_chemo:")
     #print(G_chemo)
     
-    G_tdxd <- matrix(c(-(r_prog_tdxd + r_OC_death[t] + r_AE_tdxd[t] + r_ILD_tdxd[t]), r_AE_tdxd[t], r_ILD_tdxd[t], r_prog_tdxd, 0, 0, r_OC_death[t],
-                        0, -(r_progAE_tdxd + r_OC_death[t]), 0, 0, r_progAE_tdxd, 0, r_OC_death[t],
-                        0, 0, -(r_progILD_tdxd + r_OC_death[t]), 0, 0, r_progILD_tdxd, r_OC_death[t],
-                        0, 0, 0, -(r_OC_death[t] + r_prog_death_tdxd), 0, 0, (r_OC_death[t] + r_prog_death_tdxd),
-                        0, 0, 0, 0, -(r_OC_death[t] + r_progAE_death_tdxd), 0, (r_OC_death[t] + r_progAE_death_tdxd),
-                        0, 0, 0, 0, 0, -(r_OC_death[t] + r_progILD_death_tdxd), (r_OC_death[t] + r_progILD_death_tdxd),
+    G_tdxd <- matrix(c(-(r_pf2prog_tdxd + r_OC_death[t] + r_AE_tdxd[t] + r_ILD_tdxd[t]), r_AE_tdxd[t], r_ILD_tdxd[t], r_pf2prog_tdxd, 0, 0, r_OC_death[t],
+                        0, -(r_pfAE2progAE_tdxd + r_OC_death[t]), 0, 0, r_pfAE2progAE_tdxd, 0, r_OC_death[t],
+                        0, 0, -(r_pf2progILD_tdxd + r_OC_death[t]), 0, 0, r_pf2progILD_tdxd, r_OC_death[t],
+                        0, 0, 0, -(r_OC_death[t] + r_prog2death_tdxd), 0, 0, (r_OC_death[t] + r_prog2death_tdxd),
+                        0, 0, 0, 0, -(r_OC_death[t] + r_progAE2death_tdxd), 0, (r_OC_death[t] + r_progAE2death_tdxd),
+                        0, 0, 0, 0, 0, -(r_OC_death[t] + r_pf2progILD_death_tdxd), (r_OC_death[t] + r_pf2progILD_death_tdxd),
                         0, 0, 0, 0, 0, 0, 0), 
                       ncol = 7, nrow = 7,
                       dimnames = list(c("PF", "PF_AE", "PF_ILD", "Prog", "Prog_AE", "Prog_ILD", "Death"),
@@ -176,8 +181,8 @@ transition_matrices <- function(input_var, calibrate=T){
 eval_variables <- function(input_var){
   
   
-  r_prog <- input_var[1] #Rate 1
-  r_prog_death <- input_var[2] #Rate 2
+  r_pf2prog <- input_var[1] #Rate 1
+  r_prog2death <- input_var[2] #Rate 2
   hr_pf2prog_chemo2tdxd <- input_var[3]
   
   gamma_chemo <- input_var[4]
@@ -202,15 +207,23 @@ eval_variables <- function(input_var){
   km_os_tdxd <- c(1, 0.992, 0.985, 0.967, 0.958, 0.939, 0.928, 0.899, 0.87, 0.857, 0.829, 0.815, 0.793, 0.774)#, 0.742, 0.731, 0.688, 0.661, 0.623, 0.586, 0.566, 0.539, 0.507, 0.500, 0.484)
   km_pf_tdxd <- c(1, 0.988, 0.896, 0.82, 0.809, 0.765, 0.681, 0.633, 0.592, 0.554, 0.491, 0.457, 0.422, 0.386)#, 0.371, 0.363, 0.339, 0.31, 0.295, 0.274, 0.259) 
   
-  cum_AE_chemo <- c(0, 0.0145, 0.0266, 0.0358, 0.044, 0.05, 0.056, 0.0603, 0.064, 0.067, 0.069, 0.071, 0.073, 0.074, 0.075, 0.076, 0.077, 0.0774, 0.0778)
-  cum_AE_tdxd <- c(0, 0.0145, 0.0266, 0.0358, 0.044, 0.05, 0.056, 0.0603, 0.064, 0.067, 0.069, 0.071, 0.073, 0.074, 0.075, 0.076, 0.077, 0.0774, 0.0778)
-  cum_ILD <- c(0, 0.0145, 0.0266, 0.0358, 0.044, 0.05, 0.056, 0.0603, 0.064, 0.067, 0.069, 0.071, 0.073, 0.074, 0.075, 0.076, 0.077, 0.0774, 0.0778)
+  
+  cum_AE_chemo <- c(0)
+  cum_AE_tdxd  <- c(0)
+  cum_ILD <- c(0)
+  
+  for (x in 1:15) {
+    cum_AE_chemo <- c(cum_AE_chemo, 0.085*(1 - exp(-0.3*x)))
+    cum_AE_tdxd <- c(cum_AE_tdxd, 0.082*(1 - exp(-0.3*x)))
+    cum_ILD <- c(cum_ILD, 0.079*(1 - exp(-0.14*x)))
+  }
+  
   
   #Vectors for storing the estimates of the KM curves
   km_os_chemo_model <- c()
   km_pf_chemo_model <- c()
   km_os_tdxd_model <- c()
-  km_pf_tdxd_model <- c() 
+  km_pf_tdxd_model <- c()
   
   cum_AE_chemo_model <- c()
   cum_AE_tdxd_model <- c()
