@@ -13,29 +13,6 @@
 
 library(expm)
 
-#TODO: Function currently not in use. Need to find n_deaths first.
-calc_serror <- function(n_risk, n_deaths, surv_prob){
-  serror <- c()
-  sum_temp <- 0
-  for(i in 1:length(n_risk)){
-    sum_temp <- sum_temp + n_deaths[i]/(n_risk[i]*(n_risk[i]-n_deaths[i]))
-    serror <- append(serror, surv_prob*sqrt(sum_temp))
-  }
-  return(serror)
-}
-
-
-#NOT in use
-km_pf_chemo <- c(1, 0.983, 0.756, 0.62, 0.603, 0.501, 0.439, 0.398, 0.34, 0.277, 0.268, 0.226, 0.217, 0.185) 
-n_risk_pf_chemo <- c(184, 166, 119, 93, 90, 73, 60, 51, 45, 34, 32, 29, 26, 22)
-n_deaths_pf_chemo <- c()#?????
-
-
-
-
-
-
-
 
 
 
@@ -68,7 +45,8 @@ transition_matrices <- function(input_var, calibrate=T){
   if(calibrate){
     n <- 40
   }else{
-    n <- length(r_OC_death)
+    #n <- length(r_OC_death)
+    n <- 121
   }
   #The rate of getting an AE and being discontinued. (Needs updating)
   Ft_chemo <- c()
@@ -174,11 +152,12 @@ transition_matrices <- function(input_var, calibrate=T){
 
 
 
+
 #Input:
 #input_var = a list of three values, the rate from PF to P, the rate from P to D, and the HR.
 #Output:
 #The square error when using the given inputs.
-eval_variables <- function(input_var){
+eval_variables <- function(input_var, target_var = c(16.8, 5.1, 23.4, 9.9, 0.081, 0.0757, 0.0863)){
   
   
   r_pf2prog <- input_var[1] #Rate 1
@@ -199,24 +178,19 @@ eval_variables <- function(input_var){
   A_chemo_list <- matrix_list[[1]]
   A_tdxd_list <- matrix_list[[2]]
   
+  #target_var <- tail(input_var,7)
   
-  
+
   #The extracted Kaplan-Meier values
-  km_os_chemo <- c(1, 0.986, 0.981, 0.957, 0.94, 0.927, 0.884, 0.841, 0.793, 0.738, 0.712, 0.683, 0.669, 0.634)#, 0.610, 0.566, 0.520, 0.484, 0.459, 0.460, 0.457, 0.419, 0.375)
-  km_pf_chemo <- c(1, 0.983, 0.756, 0.62, 0.603, 0.501, 0.439, 0.398, 0.34, 0.277, 0.268, 0.226, 0.217, 0.185) 
-  km_os_tdxd <- c(1, 0.992, 0.985, 0.967, 0.958, 0.939, 0.928, 0.899, 0.87, 0.857, 0.829, 0.815, 0.793, 0.774)#, 0.742, 0.731, 0.688, 0.661, 0.623, 0.586, 0.566, 0.539, 0.507, 0.500, 0.484)
-  km_pf_tdxd <- c(1, 0.988, 0.896, 0.82, 0.809, 0.765, 0.681, 0.633, 0.592, 0.554, 0.491, 0.457, 0.422, 0.386)#, 0.371, 0.363, 0.339, 0.31, 0.295, 0.274, 0.259) 
+  median_os_chemo <- target_var[1]
+  median_pf_chemo <- target_var[2]
+  median_os_tdxd <- target_var[3]
+  median_pf_tdxd <- target_var[4]
   
+  target_ae_chemo <- target_var[5]
+  target_ae_tdxd <- target_var[6]
+  target_ild_tdxd <- target_var[7]
   
-  cum_AE_chemo <- c(0)
-  cum_AE_tdxd  <- c(0)
-  cum_ILD <- c(0)
-  
-  for (x in 1:15) {
-    cum_AE_chemo <- c(cum_AE_chemo, 0.085*(1 - exp(-0.3*x)))
-    cum_AE_tdxd <- c(cum_AE_tdxd, 0.082*(1 - exp(-0.3*x)))
-    cum_ILD <- c(cum_ILD, 0.079*(1 - exp(-0.14*x)))
-  }
   
   
   #Vectors for storing the estimates of the KM curves
@@ -230,7 +204,8 @@ eval_variables <- function(input_var){
   cum_ILD_model <- c()
   
   
-  n = max(length(km_os_chemo), length(km_pf_chemo), length(km_os_tdxd), length(km_pf_tdxd), length(cum_ILD)) #Find the maximum length
+  #n = max(length(km_os_chemo), length(km_pf_chemo), length(km_os_tdxd), length(km_pf_tdxd), length(cum_ILD)) #Find the maximum length
+  n = 30
   
   #Start states
   s0_chemo <- c(1,0,0,0,0,0,0)
@@ -248,6 +223,11 @@ eval_variables <- function(input_var){
   cum_AE_tdxd_model <- append(cum_AE_tdxd_model, 0)
   cum_ILD_model <- append(cum_ILD_model, 0)
   
+  
+  model_os_chemo <- 0
+  model_pf_chemo <- 0
+  model_os_tdxd <- 0
+  model_pf_tdxd <- 0
   
   #Do the simulations
   for(t in 1:n){
@@ -280,52 +260,63 @@ eval_variables <- function(input_var){
     cum_AE_tdxd_model <- append(cum_AE_tdxd_model, cum_AE_tdxd_model[t]+s0_tdxd[1]*A_tdxd[1,2])
     cum_ILD_model <- append(cum_ILD_model, cum_ILD_model[t]+s0_tdxd[1]*A_tdxd[1,3])
     
+    if((km_os_chemo_model[t+1]<0.5) && (model_os_chemo == 0)){
+      model_os_chemo <- t
+    }
+    if((km_pf_chemo_model[t+1]<0.5) && (model_pf_chemo == 0)){
+      model_pf_chemo <- t
+    }
+    if((km_os_tdxd_model[t+1]<0.5) && (model_os_tdxd == 0)){
+      model_os_tdxd <- t
+    }
+    if((km_pf_tdxd_model[t+1]<0.5) && (model_pf_tdxd == 0)){
+      model_pf_tdxd <- t
+    }
+    
     
     s0_chemo <- s1_chemo
     s0_tdxd <- s1_tdxd
     
   }
   
+  model_ae_chemo <- cum_AE_chemo_model[12]
+  model_ae_tdxd <- cum_AE_tdxd_model[12]
+  model_ild_chemo <- cum_ILD_model[12]
   
   
-  #Calculate the error
-  #serror <- sum((km_os_chemo[2:(length(km_os_chemo))] - km_os_chemo_model[2:(length(km_os_chemo))])^2) + 
-   # sum((km_pf_chemo[2:(length(km_pf_chemo))] - km_pf_chemo_model[2:(length(km_pf_chemo))])^2) + 
-    #sum((km_os_tdxd[2:(length(km_os_tdxd))] - km_os_tdxd_model[2:(length(km_os_tdxd))])^2) + 
-    #sum((km_pf_tdxd[2:(length(km_pf_tdxd))] - km_pf_tdxd_model[2:(length(km_pf_tdxd))])^2) +
-    #sum((cum_AE_chemo[2:(length(cum_AE_chemo_model))] - cum_AE_chemo_model[2:(length(cum_AE_chemo_model))])^2) +
-    #sum((cum_AE_tdxd[2:(length(cum_AE_tdxd_model))] - cum_AE_tdxd_model[2:(length(cum_AE_tdxd_model))])^2) +
-    #sum((cum_ILD[2:(length(cum_ILD_model))] - cum_ILD_model[2:(length(cum_ILD_model))])^2)
+  #Calculate the likelihood
   
+  v_target <- c(median_os_chemo, median_pf_chemo, median_os_tdxd, median_pf_tdxd, target_ae_chemo, target_ae_tdxd, target_ild_tdxd)
+  v_target_sd <- c(1,1,1,1,0.02,0.02,0.02)
+  v_output <- c(model_os_chemo, model_pf_chemo, model_os_tdxd, model_pf_tdxd, model_ae_chemo, model_ae_tdxd, model_ild_chemo)
   
+  nllik <- -sum(dnorm(x = v_target, mean = v_output, sd = v_target_sd, log = TRUE))
   
-  serror <- sum(abs(km_os_chemo[2:(length(km_os_chemo))] - km_os_chemo_model[2:(length(km_os_chemo))])) + 
-    sum(abs(km_pf_chemo[2:(length(km_pf_chemo))] - km_pf_chemo_model[2:(length(km_pf_chemo))])) + 
-    sum(abs(km_os_tdxd[2:(length(km_os_tdxd))] - km_os_tdxd_model[2:(length(km_os_tdxd))])) + 
-    sum(abs(km_pf_tdxd[2:(length(km_pf_tdxd))] - km_pf_tdxd_model[2:(length(km_pf_tdxd))])) +
-    sum(abs(cum_AE_chemo[2:(length(cum_AE_chemo))] - cum_AE_chemo_model[2:(length(cum_AE_chemo))])) +
-    sum(abs(cum_AE_tdxd[2:(length(cum_AE_tdxd))] - cum_AE_tdxd_model[2:(length(cum_AE_tdxd))])) +
-    sum(abs(cum_ILD[2:(length(cum_ILD))] - cum_ILD_model[2:(length(cum_ILD))]))
-  
-  #print(sum(abs(km_os_chemo[2:(length(km_os_chemo))] - km_os_chemo_model[2:(length(km_os_chemo))])))
-  #print(sum(abs(km_pf_chemo[2:(length(km_pf_chemo))] - km_pf_chemo_model[2:(length(km_pf_chemo))])))
-  #print(sum(abs(km_os_tdxd[2:(length(km_os_tdxd))] - km_os_tdxd_model[2:(length(km_os_tdxd))])))
-  #print(sum(abs(km_pf_tdxd[2:(length(km_pf_tdxd))] - km_pf_tdxd_model[2:(length(km_pf_tdxd))])))
-  #print(sum(abs(cum_AE_chemo[2:(length(cum_AE_chemo))] - cum_AE_chemo_model[2:(length(cum_AE_chemo))])))
-  #print(sum(abs(cum_AE_tdxd[2:(length(cum_AE_tdxd))] - cum_AE_tdxd_model[2:(length(cum_AE_tdxd))])))
-  #print(sum(abs(cum_ILD[2:(length(cum_ILD))] - cum_ILD_model[2:(length(cum_ILD))])))
-  
-  return(serror)
-  
-  
-  
+  return(nllik)
 }
+
+
+find_opt_var <- function(target_var2 = c(16.8, 5.1,23.4, 9.9, 0.081, 0.0757, 0.0863)){
+  input_var <- c(0.15, 0.08, 0.5, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2)
+  fit_out <- optim(input_var, 
+                   eval_variables,
+                   target_var = target_var2,
+                   hessian = F)
+  opt_var <- fit_out$par
+  
+  return(opt_var)
+}
+
+
 
 #Find the optimal values (Here we could do a wider search for starting values since we might have missed the global optimum.)
 fit_out <- optim(c(0.15, 0.08, 0.5, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2), 
                  eval_variables,
                  hessian = T)
 
+#m_cov <- solve(fit_out$hessian)
+#m_cor <- cov2cor(m_cov)
+#v_se <- sqrt(diag(m_cov))
 
 #Extract the optimal values for our three variables
 opt_var <- fit_out$par
@@ -399,6 +390,7 @@ plot_function <- function(input_var){
   
   ae_test_chemo <- c(0)
   ae_test_tdxd <- c(0)
+  ae_test_ild <- c(0)
   
   
   for(t in 1:n){
@@ -426,6 +418,7 @@ plot_function <- function(input_var){
     
     ae_test_chemo <- append(ae_test_chemo, ae_test_chemo[t]+s0_chemo[1]*A_chemo[1,2])
     ae_test_tdxd <- c(ae_test_tdxd, ae_test_tdxd[t]+s0_tdxd[1]*A_tdxd[1,2])
+    ae_test_ild <- c(ae_test_ild, ae_test_ild[t]+s0_tdxd[1]*A_tdxd[1,3])
     
     s0_chemo <- s1_chemo
     s0_tdxd <- s1_tdxd
@@ -483,8 +476,10 @@ plot_function <- function(input_var){
   
   print(ae_test_chemo)
   print(ae_test_tdxd)
+  print(ae_test_ild)
   plot(0:(length(ae_test_chemo)-1), ae_test_chemo, type = "l")
   plot(0:(length(ae_test_chemo)-1), ae_test_tdxd, type = "l")
+  plot(0:(length(ae_test_chemo)-1), ae_test_ild, type = "l")
   
   ggarrange(plot1, plot2, plot3, plot4,
             ncol = 2, nrow = 2, common.legend = TRUE,legend="bottom") 

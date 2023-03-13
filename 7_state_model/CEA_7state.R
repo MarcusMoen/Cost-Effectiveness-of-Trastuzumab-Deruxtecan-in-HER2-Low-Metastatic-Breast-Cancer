@@ -1,8 +1,8 @@
 
 #Input:
-#A = a 3x3 transition matrix
+#A = a 7x7 transition matrix
 #n_cycles = number of cycles
-#Function for doing n_cycles given a 3x3 transition matrix
+#Function for doing n_cycles given a 7x7 transition matrix
 #Output:
 #A list of two DataFrames. One with the probability values for each of the three states at each cycle. And one which is used for plotting.
 cea7state <- function(A_list, n_cycles){
@@ -45,6 +45,7 @@ cea7state <- function(A_list, n_cycles){
     dr_v[t+1] <- (1/(1+0.03))^((t)*cl)
     
     #Do one cycle
+    #print(A_list[t])
     s1 <- s0 %*% A_list[[t]]
     #Update the dataframes
     df["ProgressionFree"][df["ProgressionFree"] == t] <- s1[1,1]
@@ -95,6 +96,7 @@ cea7state <- function(A_list, n_cycles){
   
   return(list(df, df_plot, dr_v))
 }
+
 
 
 
