@@ -20,8 +20,8 @@ CorrelateUtils <- function(U, Q, epsilon, delta){
       #Viol[j,k] <- viol
       C[j,k] <- rho + delta #record the desired correlation.
     }
-    print(j) #just to show the column indices.
-    print(k)
+    #print(j) #just to show the column indices.
+    #print(k)
   }
   #Fill in the other elements of C.
   C = C + t(C)
@@ -155,23 +155,25 @@ generate_psa_cost_params <- function(n_sim, seed = 0){
   set.seed(seed)
 
   #Calculate the cost of PF in chemo:
-  price_cape <- ((rbeta(n_sim, shape1 = 2, shape2 = 2)*((801.2+200)-(801.2-200)) + rep((801.2-200), n_sim))*28*2325/9000
-                      + rep(303.86, n_sim))*0.201
-  price_eribulin <- ((rbeta(n_sim, shape1 = 2, shape2 = 2)*((1224.17+300)-(1224.17-300)) + rep((1224.17-300), n_sim))*2*2.6/1
-                 + rep(831.91, n_sim))*0.511
-  price_abraxane <- ((rbeta(n_sim, shape1 = 2, shape2 = 8)*((935.81+900)-935.81) + rep(935.81, n_sim))*483.6/100
-                 + rep(454.14, n_sim))*0.103
-  price_paclitaxel <- ((rbeta(n_sim, shape1 = 8, shape2 = 2)*((155+20)-(155-95)) + rep((155-95), n_sim))*325.5/300
-                 + rep(454.14, n_sim))*0.082
-  price_gemcitabine <- ((rbeta(n_sim, shape1 = 2, shape2 = 8)*((33.81+100)-(33.81-15)) + rep((33.81-15), n_sim))*2*2325/2000
-                 + rep(831.91, n_sim))*0.103
-  cost_pf_chemo <- (price_cape + price_eribulin + price_abraxane + price_paclitaxel + price_gemcitabine)*4/3
-  #print(price_cape + price_eribulin + price_abraxane + price_paclitaxel + price_gemcitabine)
-  #print((price_cape + price_eribulin + price_abraxane + price_paclitaxel + price_gemcitabine)*4/3)
+  price_cape <- ((rbeta(n_sim, shape1 = 2, shape2 = 2)*((801.2+200)-(801.2-200)) + rep((801.2-200), n_sim))*28*2325/9000)*0.201
+  
+  price_eribulin <- ((rbeta(n_sim, shape1 = 2, shape2 = 2)*((1224.17+300)-(1224.17-300)) + rep((1224.17-300), n_sim))*2*2.6/1)
+  
+  price_abraxane <- ((rbeta(n_sim, shape1 = 2, shape2 = 8)*((935.81+900)-935.81) + rep(935.81, n_sim))*483.6/100)*0.103
+  
+  price_paclitaxel <- ((rbeta(n_sim, shape1 = 8, shape2 = 2)*((155+20)-(155-95)) + rep((155-95), n_sim))*325.5/300)*0.082
+  
+  price_gemcitabine <- ((rbeta(n_sim, shape1 = 2, shape2 = 8)*((33.81+100)-(33.81-15)) + rep((33.81-15), n_sim))*2*2325/2000)*0.103
+  
+  admin_price <- 303.86*0.201+831.91*0.511+454.14*0.103+454.14*0.082+831.91*0.103
+  cost_pf_chemo <- (price_cape + price_eribulin*0.511 + price_abraxane + price_paclitaxel + price_gemcitabine)*4/3 + rep(admin_price, n_sim)
+  
+  cost_pf_eribulin <- price_eribulin*4/3 + rep(831.91, n_sim)
+  
   
   #Calculate the cost of PF in tdxd: 
   drug_price_tdxd <- (rbeta(n_sim, shape1 = 2, shape2 = 2)*((2435.71+600)-(2435.71-600)) + rep((2435.71-600), n_sim))*418.5/100
-  cost_pf_tdxd <- (drug_price_tdxd + rep(522.43, n_sim))*4/3
+  cost_pf_tdxd <- (drug_price_tdxd)*4/3 + rep(522.43, n_sim)
 
   
   #Calculate the cost of P in chemo and tdxd:
@@ -179,7 +181,7 @@ generate_psa_cost_params <- function(n_sim, seed = 0){
   cost_p_tdxd <- cost_p_chemo
   
   #Calculate the cost of the AE and ILD states for both chemo and tdxd:
-  cost_pfAE_chemo <- rbeta(n_sim, shape1 = 2, shape2 = 2)*((4518.18*1.3)-(518.18*0.7)) + rep(518.18, n_sim) + rep(575.19, n_sim)
+  cost_pfAE_chemo <- rbeta(n_sim, shape1 = 2, shape2 = 2)*((4518.18*1.25)-(518.18*0.75)) + rep(518.18, n_sim) + rep(575.19, n_sim)
   cost_pAE_chemo <- cost_p_chemo
   cost_pfAE_tdxd <- cost_pfAE_chemo
   cost_pAE_tdxd <- cost_p_chemo
@@ -198,7 +200,8 @@ generate_psa_cost_params <- function(n_sim, seed = 0){
     cost_pAE_tdxd = cost_pAE_tdxd,
     cost_pAE_chemo = cost_pAE_chemo,
     cost_pfILD_tdxd = cost_pfILD_tdxd,
-    cost_pILD_tdxd = cost_pILD_tdxd
+    cost_pILD_tdxd = cost_pILD_tdxd,
+    cost_pf_eribulin = cost_pf_eribulin
   )
   
   return(df_cost_params)
@@ -256,7 +259,33 @@ run_PSA <- function(df_params){
     sim = 1:(n_sims*2),
     DiscountedCost = 1:(n_sims*2),
     DiscountedQALY = 1:(n_sims*2),
-    group = 1:(n_sims*2)
+    group = 1:(n_sims*2),
+    ICER = 1:(n_sims*2)
+  )
+  
+  df_psa_eribulin <- data.frame(
+    sim = 1:(n_sims*2),
+    DiscountedCost = 1:(n_sims*2),
+    DiscountedQALY = 1:(n_sims*2),
+    group = 1:(n_sims*2),
+    ICER = 1:(n_sims*2)
+  )
+  
+  df_psa_cheap_tdxd <- data.frame(
+    sim = 1:(n_sims*2),
+    DiscountedCost = 1:(n_sims*2),
+    DiscountedQALY = 1:(n_sims*2),
+    group = 1:(n_sims*2),
+    ICER = 1:(n_sims*2)
+  )
+  
+  df_psa_cheap_tdxd_eribulin <- data.frame(
+    sim = 1:(n_sims*2),
+    DiscountedCost = 1:(n_sims*2),
+    DiscountedQALY = 1:(n_sims*2),
+    group = 1:(n_sims*2),
+    ICER = 1:(n_sims*2)
+    
   )
   
   n_cycles <- 120
@@ -309,6 +338,8 @@ run_PSA <- function(df_params){
     cost_pfAE_chemo <- df_params[i,]$cost_pfAE_chemo
     cost_pAE_chemo <- df_params[i,]$cost_pAE_chemo
     
+    cost_pf_eribulin <- df_params[i,]$cost_pf_eribulin
+    
     
     cost_pf_tdxd <- df_params[i,]$cost_pf_tdxd
     cost_p_tdxd <- df_params[i,]$cost_p_tdxd
@@ -329,6 +360,15 @@ run_PSA <- function(df_params){
                       sum(df_tdxd$ProgressionFreeAE*dr_v)*cost_pfAE_tdxd + sum(df_chemo$ProgressedAE*dr_v)*cost_pAE_tdxd +
                       sum(df_tdxd$ProgressionFreeILD*dr_v)*cost_pfILD + sum(df_chemo$ProgressedILD*dr_v)*cost_pILD 
                     - (df_tdxd[1,]$ProgressionFree/2)*cost_pf_tdxd)+7270.62446
+    
+    cost_eribulin_d <- (sum(df_chemo$ProgressionFree*dr_v)*cost_pf_eribulin + sum(df_chemo$Progressed*dr_v)*cost_p_chemo +
+                       sum(df_chemo$ProgressionFreeAE*dr_v)*cost_pf_eribulin + sum(df_chemo$ProgressedAE*dr_v)*cost_pAE_chemo
+                     - (df_chemo[1,]$ProgressionFree/2)*cost_pf_eribulin) + 10375.8444
+    
+    cost_tdxd_eribulin_d <- (sum(df_tdxd$ProgressionFree*dr_v)*cost_pf_eribulin + sum(df_chemo$Progressed*dr_v)*cost_p_tdxd +
+                      sum(df_tdxd$ProgressionFreeAE*dr_v)*cost_pf_eribulin + sum(df_chemo$ProgressedAE*dr_v)*cost_pAE_tdxd +
+                      sum(df_tdxd$ProgressionFreeILD*dr_v)*cost_pf_eribulin + sum(df_chemo$ProgressedILD*dr_v)*cost_pILD 
+                    - (df_tdxd[1,]$ProgressionFree/2)*cost_pf_eribulin)+7270.62446
     
     
     #The QALY values
@@ -364,21 +404,71 @@ run_PSA <- function(df_params){
     
     
     
-    df_psa_chemo[i,]$DiscountedCost <- cost_chemo_d
-    df_psa_chemo[i,]$DiscountedQALY <- qaly_chemo_d
+    #df_psa_chemo[i,]$DiscountedCost <- cost_chemo_d
+    #df_psa_chemo[i,]$DiscountedQALY <- qaly_chemo_d
     
-    df_psa_tdxd[i,]$DiscountedCost <- cost_tdxd_d
-    df_psa_tdxd[i,]$DiscountedQALY <- qaly_tdxd_d
+    #df_psa_tdxd[i,]$DiscountedCost <- cost_tdxd_d
+    #df_psa_tdxd[i,]$DiscountedQALY <- qaly_tdxd_d
     
+    #T-DxD vs Mixed chemo
     df_psa_res[(2*i-1),]$DiscountedCost <- cost_chemo_d
     df_psa_res[(2*i-1),]$DiscountedQALY <- qaly_chemo_d
-    df_psa_res[(2*i-1),]$group <- "chemo"
+    df_psa_res[(2*i-1),]$group <- "Mixed Chemo"
     df_psa_res[(2*i-1),]$sim <- i
     
     df_psa_res[(2*i),]$DiscountedCost <- cost_tdxd_d
     df_psa_res[(2*i),]$DiscountedQALY <- qaly_tdxd_d
-    df_psa_res[(2*i),]$group <- "tdxd"
+    df_psa_res[(2*i),]$group <- "T-DxD"
     df_psa_res[(2*i),]$sim <- i
+    
+    df_psa_res[(2*i-1),]$ICER <- (cost_tdxd_d-cost_chemo_d)/(qaly_tdxd_d-qaly_chemo_d)
+    df_psa_res[(2*i),]$ICER <- (cost_tdxd_d-cost_chemo_d)/(qaly_tdxd_d-qaly_chemo_d)
+    
+    #T-DxD vs Eribulin
+    df_psa_eribulin[(2*i-1),]$DiscountedCost <- cost_eribulin_d
+    df_psa_eribulin[(2*i-1),]$DiscountedQALY <- qaly_chemo_d
+    df_psa_eribulin[(2*i-1),]$group <- "Eribulin"
+    df_psa_eribulin[(2*i-1),]$sim <- i
+    
+    df_psa_eribulin[(2*i),]$DiscountedCost <- cost_tdxd_d
+    df_psa_eribulin[(2*i),]$DiscountedQALY <- qaly_tdxd_d
+    df_psa_eribulin[(2*i),]$group <- "T-DxD"
+    df_psa_eribulin[(2*i),]$sim <- i
+    
+    df_psa_eribulin[(2*i-1),]$ICER <- (cost_tdxd_d-cost_eribulin_d)/(qaly_tdxd_d-qaly_chemo_d)
+    df_psa_eribulin[(2*i),]$ICER <- (cost_tdxd_d-cost_eribulin_d)/(qaly_tdxd_d-qaly_chemo_d)
+    
+    
+    #Cheap T-DxD vs Mixed Chemo
+    df_psa_cheap_tdxd[(2*i-1),]$DiscountedCost <- cost_chemo_d
+    df_psa_cheap_tdxd[(2*i-1),]$DiscountedQALY <- qaly_chemo_d
+    df_psa_cheap_tdxd[(2*i-1),]$group <- "Mixed Chemo"
+    df_psa_cheap_tdxd[(2*i-1),]$sim <- i
+    
+    df_psa_cheap_tdxd[(2*i),]$DiscountedCost <- cost_tdxd_eribulin_d
+    df_psa_cheap_tdxd[(2*i),]$DiscountedQALY <- qaly_tdxd_d
+    df_psa_cheap_tdxd[(2*i),]$group <- "Cheap T-DxD"
+    df_psa_cheap_tdxd[(2*i),]$sim <- i
+    
+    df_psa_cheap_tdxd[(2*i-1),]$ICER <- (cost_tdxd_eribulin_d-cost_chemo_d)/(qaly_tdxd_d-qaly_chemo_d)
+    df_psa_cheap_tdxd[(2*i),]$ICER <- (cost_tdxd_eribulin_d-cost_chemo_d)/(qaly_tdxd_d-qaly_chemo_d)
+    
+    
+    #Cheap T-DxD vs Eribulin
+    df_psa_cheap_tdxd_eribulin[(2*i-1),]$DiscountedCost <- cost_eribulin_d
+    df_psa_cheap_tdxd_eribulin[(2*i-1),]$DiscountedQALY <- qaly_chemo_d
+    df_psa_cheap_tdxd_eribulin[(2*i-1),]$group <- "Eribulin"
+    df_psa_cheap_tdxd_eribulin[(2*i-1),]$sim <- i
+    
+    df_psa_cheap_tdxd_eribulin[(2*i),]$DiscountedCost <- cost_tdxd_eribulin_d
+    df_psa_cheap_tdxd_eribulin[(2*i),]$DiscountedQALY <- qaly_tdxd_d
+    df_psa_cheap_tdxd_eribulin[(2*i),]$group <- "Cheap T-DxD"
+    df_psa_cheap_tdxd_eribulin[(2*i),]$sim <- i
+    
+    df_psa_cheap_tdxd_eribulin[(2*i-1),]$ICER <- (cost_tdxd_eribulin_d-cost_eribulin_d)/(qaly_tdxd_d-qaly_chemo_d)
+    df_psa_cheap_tdxd_eribulin[(2*i),]$ICER <- (cost_tdxd_eribulin_d-cost_eribulin_d)/(qaly_tdxd_d-qaly_chemo_d)
+    
+    
   }
   
   df_params_full <- df_params
@@ -392,7 +482,7 @@ run_PSA <- function(df_params){
   
 
 
-  return(list(df_psa_res, df_params_full))
+  return(list(df_psa_res, df_psa_eribulin, df_psa_cheap_tdxd, df_psa_cheap_tdxd_eribulin, df_params_full))
 }
 
 
@@ -402,26 +492,83 @@ run_PSA <- function(df_params){
 
 
 
-
-n = 100
+n = 50
 df_param <- PSA_params(n)
+
 
 print("Number of simulations:")
 print(nrow(df_param))
 
 res <- run_PSA(df_param)
 
-df_psa_res <- res[[1]]
-
-X<-split(df_psa_res, df_psa_res$group)
-means <- data.frame(mean_cost = c(mean(X$chemo["DiscountedCost"][[1]]), mean(X$tdxd["DiscountedCost"][[1]])),
-                    mean_qaly = c(mean(X$chemo["DiscountedQALY"][[1]]), mean(X$tdxd["DiscountedQALY"][[1]])),
-                    group = c("chemo", "tdxd"))
 
 
-ggplot(df_psa_res, aes(x=DiscountedCost, y=DiscountedQALY, col = group)) + 
-  geom_point() + 
-  geom_point(data=means,  mapping=aes(x = mean_cost, y = mean_qaly,size = 1))
+
+
+plot_psa_scatter <- function(df_psa_res, group_name1, group_name2){
+  X<-split(df_psa_res, df_psa_res$group)
+  means <- data.frame(mean_cost = c(mean(X[[group_name1]]["DiscountedCost"][[1]]), mean(X[[group_name2]]["DiscountedCost"][[1]])),
+                      mean_qaly = c(mean(X[[group_name1]]["DiscountedQALY"][[1]]), mean(X[[group_name2]]["DiscountedQALY"][[1]])),
+                      group = c(group_name1, group_name2))
+  
+  
+  ggplot(df_psa_res, aes(x=DiscountedCost, y=DiscountedQALY, col = group)) + 
+    geom_point() + geom_point(data=means,  mapping=aes(x = mean_cost, y = mean_qaly, size = 1)) +
+    labs(x = "Discounted Cost", y = "Discounted QALY") 
+}
+
+ 
+
+plot_psa_ceac <- function(df_psa_res, group_name1, group_name2){ 
+  
+  df_ICER = df_psa_res[seq(1, nrow(df_psa_res), 2), ][["ICER"]]
+  n <- length(df_ICER)
+  
+  start <- floor(min(df_ICER)/10000)*10000 - 20000
+  end <- ceiling(max(df_ICER)/10000)*10000 + 20000
+  m <- ceiling((end-start)/10000)
+  
+  
+  df_ceac <- data.frame(
+    x = 1:(m*2),
+    y = 1:(m*2),
+    group = 1:(m*2)
+  )
+  
+  for(i in 1:m){
+    wtp <- start + (i-1)*10000
+    df_ceac[(2*i-1),]$x <- wtp
+    df_ceac[(2*i),]$x <- wtp
+    
+    df_ceac[(2*i-1),]$y <- length(df_ICER[df_ICER>wtp])/n
+    df_ceac[(2*i),]$y <- length(df_ICER[df_ICER<=wtp])/n
+    
+    df_ceac[(2*i-1),]$group <- group_name1
+    df_ceac[(2*i),]$group <- group_name2
+  }
+  ggplot(df_ceac, aes(x=x, y=y, col = group)) + 
+    geom_line()  +
+    labs(x = "WTP Threshold", y = "Probability of cost-effective") 
+  
+}
+
+
+
+
+plot_psa_scatter(res[[1]], "Mixed Chemo","T-DxD")
+plot_psa_ceac(res[[1]], "Mixed Chemo","T-DxD")
+
+plot_psa_scatter(res[[2]], "Eribulin","T-DxD")
+plot_psa_ceac(res[[2]], "Eribulin","T-DxD")
+
+plot_psa_scatter(res[[3]], "Mixed Chemo","Cheap T-DxD")
+plot_psa_ceac(res[[3]] , "Mixed Chemo","Cheap T-DxD")
+
+plot_psa_scatter(res[[4]], "Eribulin","Cheap T-DxD")
+plot_psa_ceac(res[[4]], "Eribulin","Cheap T-DxD")
+
+
+
 
 
 
