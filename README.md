@@ -1,4 +1,4 @@
-# HRP392
+# Cost-Effectiveness of Trastuzumab Deruxtecan in HER2 Low Metastatic Breast Cancer
 
 
 This is a repo for the course HRP392/BIOMEDIN432 at Stanford University. 
