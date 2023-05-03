@@ -1,15 +1,7 @@
 # Cost-Effectiveness of Trastuzumab Deruxtecan in HER2 Low Metastatic Breast Cancer
 
 
-This is a repo for the course HRP392/BIOMEDIN432 at Stanford University. 
-
-The repo contains four R files. One is for the homework and the three others are for the final project.
-
-```finding_transition_probabilities.R``` is for estimating the transition probabilities when you only know the Kaplan-Meier curves.
-
-```CEA.R``` is the main file for doing the cost-effectivness analysis. It calls on ```finding_transition_probabilities.R```.
-
-```sensitivity_analysis.R``` does the sensitivity analysis.
+The repo contains three folders. The main folder is the ```7_state_model``` which includes all the R files for the 7 state version of the CEA. The folder ```3_state_model``` contains all the files for the simplifyied version, which only contains 3 states. And the final folder is a folder with the figures.
 
 
 ![](Figures/evolution3state.png)
