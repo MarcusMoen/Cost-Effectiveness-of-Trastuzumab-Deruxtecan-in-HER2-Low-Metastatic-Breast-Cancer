@@ -572,4 +572,116 @@ plot_psa_ceac(res[[4]], "Eribulin","Cheap T-DxD")
 
 
 
+# One way sensitivity analysis. Varying the cost of T-DxD
+source("finding_transition_probabilities_7state.R")
+source("CEA_7state.R")
+one_way <- function(from, to, n_sims){
+  A_chemo_list <- tm[[1]]
+  A_tdxd_list <- tm[[2]]
+  
+  n_cycles <- 120
+  
+  #Finding the values for chemo
+  df_list_chemo <- cea7state(A_chemo_list, n_cycles)
+  df_chemo <- df_list_chemo[[1]]
+  df_plot_chemo <- df_list_chemo[[2]]
+  
+  #Finding the values for tdxd
+  df_list_tdxd <- cea7state(A_tdxd_list, n_cycles)
+  df_tdxd <- df_list_tdxd[[1]]
+  df_plot_tdxd <- df_list_tdxd[[2]]
+  
+  
+  delta <- (to-from)/n_sims
+  tdxd_cost <- c()
+  icer <- c()
+  for(i in 1:n_sims){
+    
+    #The cost values
+    cost_pf_chemo <- 7203.56
+    cost_p_chemo <- 10882.6
+    cost_pfAE_chemo <- 5093.37
+    cost_pAE_chemo <- 10882.6
+    
+    
+    cost_pf_tdxd <- from + (i-1)*delta
+    cost_p_tdxd <- 10882.6
+    cost_pfAE_tdxd <- 5093.37
+    cost_pAE_tdxd <- 10882.6
+    
+    cost_pfILD <- 5093.37
+    cost_pILD <- 10882.6
+    
+    dr_v <- df_list_chemo[[3]]
+    
+    #Calculating the cost
+    cost_chemo <- (sum(df_chemo$ProgressionFree)*cost_pf_chemo + sum(df_chemo$Progressed)*cost_p_chemo +
+                     sum(df_chemo$ProgressionFreeAE)*cost_pfAE_chemo + sum(df_chemo$ProgressedAE)*cost_pAE_chemo
+                   - (df_chemo[1,]$ProgressionFree/2)*cost_pf_chemo) + 10375.8444
+    
+    cost_tdxd <- (sum(df_tdxd$ProgressionFree)*cost_pf_tdxd + sum(df_chemo$Progressed)*cost_p_tdxd +
+                    sum(df_tdxd$ProgressionFreeAE)*cost_pfAE_tdxd + sum(df_chemo$ProgressedAE)*cost_pAE_tdxd +
+                    sum(df_tdxd$ProgressionFreeILD)*cost_pfILD + sum(df_chemo$ProgressedILD)*cost_pILD 
+                  - (df_tdxd[1,]$ProgressionFree/2)*cost_pf_tdxd)+7270.62446
+    
+    cost_chemo_d <- (sum(df_chemo$ProgressionFree*dr_v)*cost_pf_chemo + sum(df_chemo$Progressed*dr_v)*cost_p_chemo +
+                       sum(df_chemo$ProgressionFreeAE*dr_v)*cost_pfAE_chemo + sum(df_chemo$ProgressedAE*dr_v)*cost_pAE_chemo
+                     - (df_chemo[1,]$ProgressionFree/2)*cost_pf_chemo) + 10375.8444
+    
+    cost_tdxd_d <- (sum(df_tdxd$ProgressionFree*dr_v)*cost_pf_tdxd + sum(df_chemo$Progressed*dr_v)*cost_p_tdxd +
+                      sum(df_tdxd$ProgressionFreeAE*dr_v)*cost_pfAE_tdxd + sum(df_chemo$ProgressedAE*dr_v)*cost_pAE_tdxd +
+                      sum(df_tdxd$ProgressionFreeILD*dr_v)*cost_pfILD + sum(df_chemo$ProgressedILD*dr_v)*cost_pILD 
+                    - (df_tdxd[1,]$ProgressionFree/2)*cost_pf_tdxd)+7270.62446
+    
+    
+    #The QALY values
+    qaly_pf_chemo <- 0.65-0.0715527
+    qaly_p_chemo <- 0.54
+    qaly_pfAE_chemo <- 0.547
+    qaly_pAE_chemo <- 0.437
+    
+    
+    qaly_pf_tdxd <- 0.65-0.05670907
+    qaly_p_tdxd <- 0.54
+    qaly_pfAE_tdxd <- 0.547
+    qaly_pAE_tdxd <- 0.437
+    
+    qaly_pfILD <- 0.547
+    qaly_pILD <- 0.437
+    
+    
+    #Calculate the qalys
+    
+    qaly_chemo <- (sum(df_chemo$ProgressionFree)*qaly_pf_chemo + sum(df_chemo$Progressed)*qaly_p_chemo +
+                     sum(df_chemo$ProgressionFreeAE)*qaly_pfAE_chemo + sum(df_chemo$ProgressedAE)*qaly_pAE_chemo
+                   - (df_chemo[1,]$ProgressionFree/2)*qaly_pf_chemo)/12
+    
+    qaly_tdxd <- (sum(df_tdxd$ProgressionFree)*qaly_pf_tdxd + sum(df_chemo$Progressed)*qaly_p_tdxd +
+                    sum(df_tdxd$ProgressionFreeAE)*qaly_pfAE_tdxd + sum(df_chemo$ProgressedAE)*qaly_pAE_tdxd +
+                    sum(df_tdxd$ProgressionFreeILD)*qaly_pfILD + sum(df_chemo$ProgressedILD)*qaly_pILD 
+                  - (df_tdxd[1,]$ProgressionFree/2)*qaly_pf_tdxd)/12
+    
+    qaly_chemo_d <- (sum(df_chemo$ProgressionFree*dr_v)*qaly_pf_chemo + sum(df_chemo$Progressed*dr_v)*qaly_p_chemo +
+                       sum(df_chemo$ProgressionFreeAE*dr_v)*qaly_pfAE_chemo + sum(df_chemo$ProgressedAE*dr_v)*qaly_pAE_chemo
+                     - (df_chemo[1,]$ProgressionFree/2)*qaly_pf_chemo)/12
+    
+    qaly_tdxd_d <- (sum(df_tdxd$ProgressionFree*dr_v)*qaly_pf_tdxd + sum(df_chemo$Progressed*dr_v)*qaly_p_tdxd +
+                      sum(df_tdxd$ProgressionFreeAE*dr_v)*qaly_pfAE_tdxd + sum(df_chemo$ProgressedAE*dr_v)*qaly_pAE_tdxd +
+                      sum(df_tdxd$ProgressionFreeILD*dr_v)*qaly_pfILD + sum(df_chemo$ProgressedILD*dr_v)*qaly_pILD 
+                    - (df_tdxd[1,]$ProgressionFree/2)*qaly_pf_tdxd)/12
+    
+    
+    
+    tdxd_cost <- append(tdxd_cost, cost_pf_tdxd)
+    icer <- append(icer, (cost_tdxd_d-cost_chemo_d)/(qaly_tdxd_d-qaly_chemo_d))
+  }
+  df <- data.frame(tdxd_cost, icer)
+  return(df)
+}
+
+one_way_res <- one_way(6000, 10000, 50)
+
+ggplot(one_way_res, aes(y=tdxd_cost, x=icer)) +
+  geom_line()+
+  geom_point()
 
